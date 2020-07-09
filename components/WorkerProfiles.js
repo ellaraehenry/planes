@@ -1,115 +1,16 @@
-import React, { useState, useRef, useMemo } from 'react'
-import { View, Text, StyleSheet, Image, PanResponder, Animated } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { View, Text, StyleSheet, Image, Animated } from 'react-native'
 import Card from './Card'
-import { WORKERS } from '../data/workers'
 import { tick, cross, logo } from '../constants/Images'
 import Colors from '../constants/Colors'
+import WorkerProfilesAnimations from './WorkerProfilesAnimations'
 
-const panThreshold = 150
-const hideCardAnimationDuration = 150
 
-const WorkerProfiles = () => {
+const WorkerProfiles = ({workers}) => {
 
-  const [cards, setCards] = useState(WORKERS)
+  const [cards, setCards] = useState(workers)
   const [componentWidth, setComponentWidth] = useState(0)
-  const panPosition = useRef(new Animated.ValueXY()).current;
-  const inputRange = [-componentWidth / 2, 0, componentWidth / 2]
-
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: (evt, gestureState) => true,
-    onPanResponderMove: (evt, gestureState) => {
-      panPosition.setValue({ x: gestureState.dx, y: gestureState.dy })
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx > panThreshold) {
-        Animated.timing(panPosition, {
-          toValue: { x: componentWidth, y: gestureState.dy },
-          duration: hideCardAnimationDuration,
-          useNativeDriver: true,
-        }).start(() => updateCards())
-      } else if (gestureState.dx < -panThreshold) {
-        Animated.timing(panPosition, {
-          toValue: { x: -componentWidth, y: gestureState.dy },
-          duration: hideCardAnimationDuration,
-          useNativeDriver: true,
-        }).start(() => updateCards())
-      } else {
-        Animated.spring(panPosition, {
-          toValue: { x: 0, y: 0 },
-          friction: 5,
-          useNativeDriver: true
-        }).start()
-      }
-    },
-  }), [cards, componentWidth]);
-
-
-  const rotateCard = panPosition.x.interpolate({
-    inputRange: inputRange,
-    outputRange: ['-5deg', '0deg', '5deg'],
-    extrapolate: 'clamp'
-  })
-
-  const scaleNextCard = panPosition.x.interpolate({
-    inputRange: inputRange,
-    outputRange: [1, 0.9, 1],
-    extrapolate: 'clamp',
-  })
-
-  const scaleTick = panPosition.x.interpolate({
-    inputRange: inputRange,
-    outputRange: [1, 1, 1.5],
-    extrapolate: 'clamp',
-  })
-
-  const scaleCross = panPosition.x.interpolate({
-    inputRange: inputRange,
-    outputRange: [1.5, 1, 1],
-    extrapolate: 'clamp',
-  })
-
-  const updateCards = () => {
-    let newCards = [...cards]
-    newCards.shift()
-    setCards(newCards)
-    panPosition.setValue({ x: 0, y: 0 })
-  }
-
-  const swipeStyles = {
-    transform: [...panPosition.getTranslateTransform(), {
-      rotate: rotateCard
-    }],
-    zIndex: cards.length
-  }
-
-  const nextCardStyles = {
-    transform: [{ scale: scaleNextCard }]
-  }
-
-
-  const renderCards = () => {
-    return cards.map((worker, i) => {
-      if (i === 0) {
-        return (
-          <Animated.View
-            {...panResponder.panHandlers}
-            key={worker.id}
-            style={[styles.profiles, swipeStyles]}>
-            <Card img={worker.img} name={worker.name} />
-          </Animated.View>
-        )
-      } else {
-        let zIndexStyle = { zIndex: cards.length - i }
-        return (
-          <Animated.View
-            key={worker.id}
-            style={[styles.profiles, nextCardStyles, zIndexStyle]}>
-            <Card img={worker.img} name={worker.name} />
-          </Animated.View>
-        )
-      }
-    })
-  }
+  const animations = useMemo(() => new WorkerProfilesAnimations(cards, setCards, componentWidth), [cards, componentWidth]);
 
   return (
     <View style={styles.container} onLayout={(e) => setComponentWidth(e.nativeEvent.layout.width)}>
@@ -118,17 +19,53 @@ const WorkerProfiles = () => {
         <Text style={styles.jobTitle}>Position: Stunt double</Text>
       </View>
       <View style={styles.main}>
-        {renderCards()}
+        {renderCards(animations, cards)}
         <View>
           <Text>No more profiles!</Text>
         </View>
       </View>
       <View style={styles.footer}>
-        <Animated.Image style={{ transform: [{ scale: scaleCross }] }} source={cross} />
-        <Animated.Image style={{ transform: [{ scale: scaleTick }] }} source={tick} />
+        <Animated.Image style={{ transform: [{ scale: animations.scaleCross }] }} source={cross} />
+        <Animated.Image style={{ transform: [{ scale: animations.scaleTick }] }} source={tick} />
       </View>
     </View>
   )
+}
+
+const renderCards = (animations, cards) => {
+
+  const swipeStyles = {
+    transform: [...animations.panPosition.getTranslateTransform(), {
+      rotate: animations.rotateCard
+    }],
+    zIndex: cards.length
+  }
+
+  const nextCardStyles = {
+    transform: [{ scale: animations.scaleNextCard }]
+  }
+
+  return cards.map((worker, i) => {
+    if (i === 0) {
+      return (
+        <Animated.View
+          {...animations.panHandlers}
+          key={worker.id}
+          style={[styles.profiles, swipeStyles]}>
+          <Card img={worker.img} name={worker.name} />
+        </Animated.View>
+      )
+    } else {
+      let zIndexStyle = { zIndex: cards.length - i }
+      return (
+        <Animated.View
+          key={worker.id}
+          style={[styles.profiles, nextCardStyles, zIndexStyle]}>
+          <Card img={worker.img} name={worker.name} />
+        </Animated.View>
+      )
+    }
+  })
 }
 
 const styles = StyleSheet.create({
