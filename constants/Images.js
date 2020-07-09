@@ -1,0 +1,8 @@
+export const user1 = require('../assets/images/user1.jpg')
+export const user2 = require('../assets/images/user2.jpg')
+export const user3 = require('../assets/images/user3.jpg')
+export const user4 = require('../assets/images/user4.jpg')
+export const user5 = require('../assets/images/user5.jpg')
+export const tick = require('../assets/images/tick.png')
+export const cross = require('../assets/images/cross.png')
+export const logo = require('../assets/images/logo.png')
